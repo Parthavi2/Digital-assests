@@ -1,233 +1,143 @@
-# 🎯 HighlightGuard AI
+# HighlightGuard AI
 
-**AI-Powered Sports Highlight Protection System**
+HighlightGuard AI is an AI-powered sports media protection platform designed to detect and analyze unauthorized usage of high-value highlights such as goals, wickets, and key match moments across digital platforms.
 
-HighlightGuard AI is a full-stack, AI-driven platform designed to protect high-value sports highlights such as goals, wickets, and key match moments from unauthorized usage across digital platforms. It goes beyond traditional detection systems by combining content similarity, behavioral analytics, and propagation intelligence to generate actionable insights and evidence reports.
+The system transforms traditional content monitoring into a complete misuse intelligence pipeline by combining content similarity detection, behavioral analytics, and propagation tracking.
 
 ---
 
-# 🚀 Key Features
+# Solution Overview
 
-## 🧠 Intelligent Content Detection
+The platform generates multimodal fingerprints (audio + video) for official content and compares them with publicly available media using a hybrid detection pipeline that combines real-time API-based retrieval and simulated intelligence layers.
+
+Unlike traditional systems, it does not rely only on direct content matching. It incorporates advanced techniques such as behavioral analysis, fragment reconstruction, and content propagation tracking to understand how content is misused and distributed.
+
+---
+
+# How It Solves the Problem
+
+- Detects copied and edited highlights using fingerprinting and similarity matching  
+- Identifies suspicious accounts through behavioral analysis (Highlight Density Score)  
+- Detects evasion techniques like split uploads using Fragment Stitching  
+- Tracks how content spreads using propagation and engagement signals  
+- Classifies risk using a multi-factor scoring engine  
+- Generates evidence-backed reports for structured decision-making  
+- Enables human-in-the-loop review for accurate enforcement  
+
+---
+
+# Key Features
+
+## Intelligent Content Detection
 - Multimodal fingerprinting (audio + video)
-- Detects edited, cropped, and re-uploaded content
 - Hybrid similarity matching (hash + vector-based)
+- Detection of edited and re-uploaded content
 
-## ⚡ Behavioral Intelligence
-- Highlight Density Score to detect content farming
-- Account-level behavior modeling
-- Suspicious activity detection
+## Behavioral Intelligence
+- Highlight Density Score for account-level analysis
+- Suspicious activity and pattern detection
 
-## 🧩 Advanced Misuse Detection
-- Fragment Stitching Detection (split clips reconstruction)
+## Advanced Misuse Detection
+- Fragment Stitching (reconstructs split clips)
 - Content Mutation Tracking (edit → meme → repost)
 
-## 🌐 Network Intelligence
+## Network Intelligence
 - Propagation Tracking (viral spread analysis)
-- Cross-platform content monitoring
-- Graph-based relationship mapping (planned)
+- Cross-platform monitoring
 
-## 🚨 Risk & Decision System
+## Risk & Decision System
 - Multi-factor risk scoring (LOW → CRITICAL)
 - Evidence report generation
-- Human-in-the-loop review workflow
+- Human review workflow
 
 ---
 
-# 🏗️ System Architecture
-Frontend (Next.js)
-↓
-Backend API (Node.js + Express)
-↓
-Intelligence Layer (Detection + Risk + Analysis)
-↓
-Database (PostgreSQL)
-↓
-External APIs (YouTube + Gemini)
+# Technology Stack
 
-
----
-
-# ⚙️ Tech Stack
-
-## 🖥️ Frontend
+## Frontend
 - Next.js 14
 - React.js
 - CSS Modules
 - Fetch API
 - LocalStorage
 
-## ⚙️ Backend
+## Backend
 - Node.js + Express.js
 - JWT Authentication
-- bcrypt (security)
-- Multer (file upload)
-- Middleware (Helmet, CORS, Rate Limiting)
+- bcrypt (password security)
+- Multer (file uploads)
+- Middleware: Helmet, CORS, Rate Limiting
 
-## 🗄️ Database
+## Database & Storage
 - PostgreSQL + Prisma ORM
 - Local JSON DB (prototype mode)
 - MongoDB (planned)
 - Redis (planned)
+- Local uploads storage
 
-## 🧠 AI & Processing
+## AI & Processing
 - Google Gemini API (AI reasoning & insights)
 - Simulated fingerprinting pipeline
 - FFmpeg/OpenCV (planned)
 - FAISS/Milvus (planned)
-- BullMQ (background jobs)
 
-## ☁️ Deployment
+## Deployment
 - Frontend → Vercel
 - Backend → Render
 - Database → Neon / Supabase
 
 ---
 
-# 🤖 Google AI Integration
+# Google AI Integration
 
-We use **Google Gemini AI** to enhance system intelligence:
-
-- Contextual content analysis
-- Risk reasoning generation
-- Evidence report summarization
-- Explainable AI outputs
+The system integrates Google Gemini AI to enhance intelligence and explainability. It is used for contextual content analysis, generating risk reasoning, and summarizing detection outputs into structured evidence reports for human review.
 
 ---
 
-# 📂 Project Structure
-backend/
-├── src/
-│ ├── controllers/
-│ ├── services/
-│ ├── routes/
-│ ├── middleware/
-│ ├── jobs/
-│ └── utils/
-├── prisma/
-└── uploads/
+# System Workflow
 
-frontend/
-├── app/
-├── components/
-├── pages/
-└── styles/
-
+Login  
+→ Upload Official Asset  
+→ Fingerprint Generation  
+→ Platform Search (YouTube API)  
+→ Similarity Matching  
+→ Behavioral Analysis  
+→ Fragment Detection  
+→ Propagation Tracking  
+→ Risk Classification  
+→ Evidence Generation  
+→ Human Review  
+→ Dashboard Update  
 
 ---
 
-# 🔄 System Workflow
-Login
-→ Upload Official Asset
-→ Fingerprint Generation
-→ Platform Search (YouTube)
-→ Similarity Matching
-→ Behavioral Analysis
-→ Fragment Detection
-→ Propagation Tracking
-→ Risk Classification
-→ Evidence Generation
-→ Human Review
-→ Dashboard Update
+# Deployment Overview
 
+The system is cloud deployed to ensure accessibility and scalability:
+- Frontend hosted on Vercel  
+- Backend hosted on Render  
+- Database hosted on cloud PostgreSQL (Neon/Supabase)  
+- Secure environment variables used for API keys  
 
 ---
 
-# 📊 Dashboard Modules
+# Future Scope
 
-- Dashboard Analytics
-- Asset Management
-- Detection Feed
-- Risk Intelligence
-- Account Behavior Analysis
-- Fragment Reconstruction
-- Content Spread Tracking
-- Content Evolution (Mutation)
-- Evidence Reports
-- Review & Actions
+- Real-time multi-platform crawling (Instagram, X, OTT)  
+- Deep learning-based video similarity models  
+- Graph-based propagation analysis (Neo4j)  
+- Distributed microservices architecture  
+- Streaming analytics and real-time dashboards  
+- Enterprise DRM and enforcement integration  
 
 ---
 
-# 🔐 Security
+# Unique Value Proposition
 
-- JWT-based authentication
-- Role-Based Access Control (Admin / Analyst / Creator)
-- Password hashing (bcrypt)
-- File validation
-- Helmet security headers
-- CORS & Rate limiting
-- Audit logging
+HighlightGuard AI moves beyond simple content detection by combining content analysis, behavioral intelligence, and network-level tracking into a unified misuse intelligence system.
 
 ---
 
-# ⚡ Setup Instructions
+# One-Line Summary
 
-## 1. Clone Repository
-
-```bash
-git clone https://github.com/your-repo/highlightguard-ai.git
-cd highlightguard-ai
-2. Install Dependencies
-Backend
-cd backend
-npm install
-Frontend
-cd frontend
-npm install
-3. Environment Variables
-Create .env in backend:
-
-PORT=5000
-JWT_SECRET=your_secret
-DATABASE_URL=your_postgres_url
-YOUTUBE_API_KEY=your_youtube_key
-GEMINI_API_KEY=your_gemini_key
-NODE_ENV=development
-UPLOAD_DIR=uploads
-Frontend .env:
-
-NEXT_PUBLIC_API_BASE_URL=http://localhost:5000/api
-4. Run Project
-Backend
-npm run dev
-Frontend
-npm run dev
-☁️ Deployment
-Deploy frontend on Vercel
-
-Deploy backend on Render
-
-Use Neon/Supabase for PostgreSQL
-
-Add environment variables in hosting platforms
-
-🔮 Future Scope
-Real-time multi-platform crawling (Instagram, X, OTT)
-
-Deep learning-based video similarity models
-
-Graph-based propagation analysis (Neo4j)
-
-Distributed microservices architecture
-
-Streaming analytics (Kafka)
-
-Enterprise DRM integration
-
-🏆 USP
-“From simple content detection to complete misuse intelligence.”
-
-Combines content + behavior + network analysis
-
-Detects advanced evasion techniques
-
-Generates explainable evidence
-
-Designed for real-world enforcement workflows
-
-👨‍💻 Authors
-Team HighlightGuard AI
-
-📄 License
-This project is developed for hackathon/prototype purposes.
-
+HighlightGuard AI transforms content detection into complete misuse intelligence for sports media protection.
