@@ -1,0 +1,93 @@
+services:
+  postgres:
+    image: postgres:16-alpine
+    container_name: highlightguard-postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: highlightguard
+      POSTGRES_PASSWORD: highlightguard
+      POSTGRES_DB: highlightguard_ai
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U highlightguard -d highlightguard_ai"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  mongo:
+    image: mongo:7
+    container_name: highlightguard-mongo
+    restart: unless-stopped
+    ports:
+      - "27017:27017"
+    volumes:
+      - mongo_data:/data/db
+
+  redis:
+    image: redis:7-alpine
+    container_name: highlightguard-redis
+    restart: unless-stopped
+    ports:
+      - "6379:6379"
+    command: ["redis-server", "--appendonly", "yes"]
+    volumes:
+      - redis_data:/data
+
+  neo4j:
+    image: neo4j:5-community
+    container_name: highlightguard-neo4j
+    restart: unless-stopped
+    environment:
+      NEO4J_AUTH: neo4j/highlightguard
+    ports:
+      - "7474:7474"
+      - "7687:7687"
+    volumes:
+      - neo4j_data:/data
+
+  backend:
+    build: .
+    container_name: highlightguard-backend
+    restart: unless-stopped
+    depends_on:
+      postgres:
+        condition: service_healthy
+      mongo:
+        condition: service_started
+      redis:
+        condition: service_started
+      neo4j:
+        condition: service_started
+    environment:
+      NODE_ENV: development
+      PORT: 5000
+      API_BASE_URL: http://localhost:5000
+      FRONTEND_ORIGIN: http://localhost:3000
+      DATABASE_URL: postgresql://highlightguard:highlightguard@postgres:5432/highlightguard_ai?schema=public
+      MONGODB_URI: mongodb://mongo:27017
+      MONGODB_DB: highlightguard_ai
+      REDIS_HOST: redis
+      REDIS_PORT: 6379
+      NEO4J_URI: bolt://neo4j:7687
+      NEO4J_USERNAME: neo4j
+      NEO4J_PASSWORD: highlightguard
+      JWT_SECRET: replace_with_a_long_random_secret_for_production
+      JWT_EXPIRES_IN: 7d
+      BCRYPT_SALT_ROUNDS: 12
+      UPLOAD_DIR: uploads
+      MAX_UPLOAD_MB: 750
+      LOG_LEVEL: info
+    ports:
+      - "5000:5000"
+    volumes:
+      - ./uploads:/app/uploads
+    command: sh -c "npx prisma db push && npm run seed && npm start"
+
+volumes:
+  postgres_data:
+  mongo_data:
+  redis_data:
+  neo4j_data:

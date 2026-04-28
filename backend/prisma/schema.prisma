@@ -1,0 +1,487 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum Role {
+  ADMIN
+  ANALYST
+  CREATOR_PARTNER
+}
+
+enum UploadStatus {
+  PENDING
+  PROCESSING
+  READY
+  FAILED
+  ARCHIVED
+}
+
+enum FingerprintStatus {
+  NOT_STARTED
+  QUEUED
+  PROCESSING
+  COMPLETED
+  FAILED
+}
+
+enum Platform {
+  YOUTUBE
+  INSTAGRAM
+  X_TWITTER
+  FACEBOOK
+  TELEGRAM
+  WEBSITE
+}
+
+enum DetectionStatus {
+  CANDIDATE
+  MATCHED
+  DISMISSED
+  NEEDS_REVIEW
+}
+
+enum RiskCategory {
+  LOW_RISK
+  MEDIUM_RISK
+  HIGH_RISK
+  CRITICAL_RISK
+}
+
+enum ReviewStatus {
+  PENDING_REVIEW
+  UNDER_INVESTIGATION
+  APPROVED_ACTION
+  REJECTED_SAFE
+  ESCALATED
+}
+
+enum RecommendedAction {
+  MONITOR
+  REQUEST_LICENSE_REVIEW
+  SEND_WARNING
+  PREPARE_TAKEDOWN
+  ESCALATE_LEGAL
+}
+
+model Organization {
+  id                      String          @id @default(uuid())
+  name                    String
+  slug                    String          @unique
+  domain                  String?
+  rightsTerritories       Json?
+  notificationPreferences Json?
+  securitySettings        Json?
+  createdAt               DateTime        @default(now())
+  updatedAt               DateTime        @updatedAt
+  users                   User[]
+  assets                  OfficialAsset[]
+  apiKeys                 ApiKey[]
+
+  @@index([createdAt])
+}
+
+model User {
+  id               String          @id @default(uuid())
+  email            String          @unique
+  passwordHash     String
+  name             String
+  role             Role            @default(CREATOR_PARTNER)
+  organizationId   String?
+  organization     Organization?   @relation(fields: [organizationId], references: [id])
+  isActive         Boolean         @default(true)
+  profile          Json?
+  lastLoginAt      DateTime?
+  createdAt        DateTime        @default(now())
+  updatedAt        DateTime        @updatedAt
+  uploadedAssets   OfficialAsset[] @relation("UploadedAssets")
+  assignedReviews  ReviewCase[]    @relation("AssignedReviews")
+  reviewComments   ReviewComment[]
+  auditLogs        AuditLog[]
+  notifications    Notification[]
+  apiKeys          ApiKey[]
+
+  @@index([role])
+  @@index([organizationId])
+  @@index([createdAt])
+}
+
+model ApiKey {
+  id             String       @id @default(uuid())
+  keyId          String       @unique
+  hashedKey      String
+  label          String
+  scopes         Json
+  organizationId String
+  organization   Organization @relation(fields: [organizationId], references: [id])
+  createdById    String
+  createdBy      User         @relation(fields: [createdById], references: [id])
+  lastUsedAt     DateTime?
+  createdAt      DateTime     @default(now())
+  revokedAt      DateTime?
+
+  @@index([organizationId])
+}
+
+model OfficialAsset {
+  id                 String              @id @default(uuid())
+  assetId            String              @unique
+  title              String
+  matchName          String
+  tournament         String
+  teams              Json
+  sportType          String
+  highlightCategory  String
+  rightsOwner        String
+  allowedUsagePolicy Json
+  mediaUrl           String
+  thumbnailUrl       String?
+  duration           Float
+  durationSeconds    Int?
+  uploadedFilePath   String?
+  uploadStatus       UploadStatus        @default(PENDING)
+  fingerprintStatus  FingerprintStatus   @default(NOT_STARTED)
+  uploadedById       String
+  uploadedBy         User                @relation("UploadedAssets", fields: [uploadedById], references: [id])
+  organizationId     String?
+  organization       Organization?       @relation(fields: [organizationId], references: [id])
+  assetFamily        String?
+  createdAt          DateTime            @default(now())
+  updatedAt          DateTime            @updatedAt
+  fingerprint        Fingerprint?
+  detections         DetectionResult[]
+  propagationEvents  PropagationEvent[]
+  mutationNodes      MutationNode[]
+  evidencePackets    EvidencePacket[]
+  fragmentCases      FragmentStitchingCase[]
+
+  @@index([assetId])
+  @@index([highlightCategory])
+  @@index([sportType])
+  @@index([createdAt])
+}
+
+model Fingerprint {
+  id                 String            @id @default(uuid())
+  officialAssetId    String            @unique
+  officialAsset      OfficialAsset     @relation(fields: [officialAssetId], references: [id], onDelete: Cascade)
+  keyframeManifest   Json
+  frameHashes        Json
+  frameHash          String?
+  audioFingerprint   String
+  audioHash          String?
+  videoEmbedding     Json
+  audioEmbedding     Json
+  vectorIds          Json
+  status             FingerprintStatus @default(PROCESSING)
+  processingStatus   String?
+  processingLog      Json?
+  generatedAt        DateTime?
+  createdAt          DateTime          @default(now())
+  updatedAt          DateTime          @updatedAt
+
+  @@index([status])
+  @@index([createdAt])
+}
+
+model CrawledMedia {
+  id              String            @id @default(uuid())
+  platform        Platform
+  detectedUrl     String            @unique
+  accountName     String
+  accountHandle   String
+  caption         String
+  hashtags        Json
+  uploadTimestamp DateTime
+  views           Int               @default(0)
+  likes           Int               @default(0)
+  shares          Int               @default(0)
+  mediaUrl        String
+  thumbnailUrl    String?
+  crawlTimestamp  DateTime          @default(now())
+  accountId       String
+  rawPayloadId    String?
+  relatedAssetGuess String?
+  detections      DetectionResult[]
+
+  @@index([accountId])
+  @@index([platform])
+  @@index([crawlTimestamp])
+  @@index([uploadTimestamp])
+}
+
+model DetectionResult {
+  id                    String          @id @default(uuid())
+  detectionId           String          @unique
+  crawledMediaId        String
+  crawledMedia          CrawledMedia    @relation(fields: [crawledMediaId], references: [id], onDelete: Cascade)
+  officialAssetId       String
+  officialAsset         OfficialAsset   @relation(fields: [officialAssetId], references: [id], onDelete: Cascade)
+  videoSimilarityScore  Float
+  audioSimilarityScore  Float
+  frameHashSimilarity   Float
+  embeddingSimilarity   Float
+  similarityScore       Float
+  confidenceScore       Float
+  matchedDuration       Float
+  matchedTimestampRange Json
+  matchedFrames         Json
+  matchedSegments       Json
+  detectionStatus       DetectionStatus @default(MATCHED)
+  createdAt             DateTime        @default(now())
+  updatedAt             DateTime        @updatedAt
+  riskScores            RiskScore[]
+  evidencePackets       EvidencePacket[]
+
+  @@index([detectionId])
+  @@index([crawledMediaId])
+  @@index([officialAssetId])
+  @@index([confidenceScore])
+  @@index([detectionStatus])
+  @@index([createdAt])
+}
+
+model AccountIntelligence {
+  id                              String       @id @default(uuid())
+  accountId                       String       @unique
+  platform                        Platform
+  accountName                     String
+  accountHandle                   String
+  totalPostsScanned               Int          @default(0)
+  highlightPosts                  Int          @default(0)
+  copiedContentCount              Int          @default(0)
+  repeatedMatchContentPercentage  Float        @default(0)
+  postingFrequency                Float        @default(0)
+  highRiskDetectionCount          Int          @default(0)
+  highlightDensityScore           Float        @default(0)
+  accountHistoryScore             Float        @default(0)
+  monetizationSignalScore         Float        @default(0)
+  accountRiskLevel                RiskCategory @default(LOW_RISK)
+  signals                         Json?
+  lastCalculatedAt                DateTime     @default(now())
+  createdAt                       DateTime     @default(now())
+  updatedAt                       DateTime     @updatedAt
+
+  @@index([accountId])
+  @@index([platform])
+  @@index([accountRiskLevel])
+  @@index([highlightDensityScore])
+}
+
+model FragmentStitchingCase {
+  id                                String        @id @default(uuid())
+  accountId                         String
+  officialAssetId                    String
+  officialAsset                      OfficialAsset @relation(fields: [officialAssetId], references: [id], onDelete: Cascade)
+  matchName                          String
+  assetFamily                        String?
+  fragmentCount                      Int
+  reconstructedTimeline              Json
+  reconstructedHighlightPercentage   Float
+  fragmentStitchingScore             Float
+  stitchingRiskReason                String
+  firstFragmentAt                    DateTime
+  lastFragmentAt                     DateTime
+  createdAt                          DateTime      @default(now())
+  updatedAt                          DateTime      @updatedAt
+
+  @@index([accountId])
+  @@index([officialAssetId])
+  @@index([fragmentStitchingScore])
+  @@index([createdAt])
+}
+
+model PropagationEvent {
+  id                                String        @id @default(uuid())
+  officialAssetId                    String
+  officialAsset                      OfficialAsset @relation(fields: [officialAssetId], references: [id], onDelete: Cascade)
+  repostCount                        Int
+  viewVelocity                       Float
+  crossPlatformAppearances           Int
+  firstDetectedUnauthorizedUpload    DateTime
+  relatedAccounts                    Json
+  timeToSpikeMinutes                 Int
+  propagationVelocityScore           Float
+  viralRiskScore                     Float
+  spikeDetected                      Boolean       @default(false)
+  spikeReason                        String?
+  createdAt                          DateTime      @default(now())
+  updatedAt                          DateTime      @updatedAt
+
+  @@index([officialAssetId])
+  @@index([spikeDetected])
+  @@index([viralRiskScore])
+  @@index([createdAt])
+}
+
+model MutationNode {
+  id                  String         @id @default(uuid())
+  mutationId          String         @unique
+  parentNodeId        String?
+  parentNode          MutationNode?  @relation("MutationTree", fields: [parentNodeId], references: [id])
+  childVersions       MutationNode[] @relation("MutationTree")
+  officialAssetId     String
+  officialAsset       OfficialAsset  @relation(fields: [officialAssetId], references: [id], onDelete: Cascade)
+  platform            Platform
+  accountName         String
+  transformationType  String
+  similarityScore     Float
+  mutationScore       Float          @default(0)
+  timestamp           DateTime
+  metadata            Json?
+  createdAt           DateTime       @default(now())
+  updatedAt           DateTime       @updatedAt
+
+  @@index([mutationId])
+  @@index([parentNodeId])
+  @@index([officialAssetId])
+  @@index([platform])
+  @@index([timestamp])
+}
+
+model RiskScore {
+  id                         String          @id @default(uuid())
+  detectionId                String
+  detection                  DetectionResult @relation(fields: [detectionId], references: [id], onDelete: Cascade)
+  similarityScore            Float
+  highlightPriorityScore     Float
+  highlightDensityScore      Float
+  fragmentStitchingScore     Float
+  propagationVelocityScore   Float
+  mutationScore              Float
+  accountHistoryScore        Float
+  monetizationSignalScore    Float
+  finalScore                 Float
+  finalRiskScore             Float?
+  riskCategory               RiskCategory
+  riskMeaning                String
+  riskReasons                Json?
+  recommendedAction          RecommendedAction?
+  explainability             Json
+  createdAt                  DateTime        @default(now())
+  updatedAt                  DateTime        @updatedAt
+
+  @@index([detectionId])
+  @@index([riskCategory])
+  @@index([finalScore])
+  @@index([createdAt])
+}
+
+model EvidencePacket {
+  id                      String             @id @default(uuid())
+  evidenceId              String             @unique
+  detectionId             String
+  detection               DetectionResult    @relation(fields: [detectionId], references: [id], onDelete: Cascade)
+  officialAssetId          String
+  officialAsset            OfficialAsset      @relation(fields: [officialAssetId], references: [id], onDelete: Cascade)
+  detectedUrl              String
+  platform                 Platform
+  accountName              String
+  matchedFrames            Json
+  matchedTimestampRange    Json
+  similarityScore          Float
+  riskScore                Float
+  riskCategory             RiskCategory
+  highlightDensityScore    Float
+  fragmentStitchingScore   Float
+  propagationSummary       Json
+  mutationLineage          Json
+  reasonForFlagging        String
+  recommendedAction        RecommendedAction
+  reviewStatus             ReviewStatus      @default(PENDING_REVIEW)
+  packetPayload            Json
+  createdAt                DateTime          @default(now())
+  updatedAt                DateTime          @updatedAt
+  reviewCase               ReviewCase?
+
+  @@index([evidenceId])
+  @@index([detectionId])
+  @@index([officialAssetId])
+  @@index([riskCategory])
+  @@index([reviewStatus])
+  @@index([createdAt])
+}
+
+model ReviewCase {
+  id               String          @id @default(uuid())
+  evidencePacketId String          @unique
+  evidencePacket   EvidencePacket  @relation(fields: [evidencePacketId], references: [id], onDelete: Cascade)
+  status           ReviewStatus    @default(PENDING_REVIEW)
+  assignedToId     String?
+  assignedTo       User?           @relation("AssignedReviews", fields: [assignedToId], references: [id])
+  priority         RiskCategory    @default(MEDIUM_RISK)
+  decisionSummary  String?
+  createdAt        DateTime        @default(now())
+  updatedAt        DateTime        @updatedAt
+  comments         ReviewComment[]
+
+  @@index([status])
+  @@index([assignedToId])
+  @@index([priority])
+  @@index([createdAt])
+}
+
+model ReviewComment {
+  id           String     @id @default(uuid())
+  reviewCaseId String
+  reviewCase   ReviewCase @relation(fields: [reviewCaseId], references: [id], onDelete: Cascade)
+  authorId     String
+  author       User       @relation(fields: [authorId], references: [id])
+  comment      String
+  createdAt    DateTime   @default(now())
+
+  @@index([reviewCaseId])
+  @@index([authorId])
+  @@index([createdAt])
+}
+
+model Notification {
+  id        String   @id @default(uuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  type      String
+  title     String
+  body      String
+  readAt    DateTime?
+  metadata  Json?
+  createdAt DateTime @default(now())
+
+  @@index([userId])
+  @@index([type])
+  @@index([createdAt])
+}
+
+model AuditLog {
+  id           String   @id @default(uuid())
+  actorId      String?
+  actor        User?    @relation(fields: [actorId], references: [id])
+  action       String
+  entityType   String
+  entityId     String?
+  metadata     Json?
+  ipAddress    String?
+  userAgent    String?
+  createdAt    DateTime @default(now())
+
+  @@index([actorId])
+  @@index([action])
+  @@index([entityType])
+  @@index([createdAt])
+}
+
+model SystemLog {
+  id        String   @id @default(uuid())
+  level     String
+  source    String
+  message   String
+  context   Json?
+  createdAt DateTime @default(now())
+
+  @@index([level])
+  @@index([source])
+  @@index([createdAt])
+}

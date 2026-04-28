@@ -1,0 +1,10 @@
+const PLATFORMS = Object.freeze({
+  YOUTUBE: 'YOUTUBE',
+  INSTAGRAM: 'INSTAGRAM',
+  X_TWITTER: 'X_TWITTER',
+  FACEBOOK: 'FACEBOOK',
+  TELEGRAM: 'TELEGRAM',
+  WEBSITE: 'WEBSITE'
+});
+
+module.exports = { PLATFORMS };

@@ -1,0 +1,15 @@
+node_modules/
+.next/
+dist/
+build/
+*.log
+
+.env
+.env.*
+!.env.example
+
+uploads/*
+!uploads/.gitkeep
+backend/uploads/*
+!backend/uploads/.gitkeep
+backend/data/local-demo-db.json
