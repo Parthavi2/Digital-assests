@@ -78,12 +78,15 @@ PORT=5000
 JWT_SECRET=your_jwt_secret
 DATABASE_URL=your_postgresql_url
 YOUTUBE_API_KEY=your_youtube_api_key
+GEMINI_API_KEY=your_gemini_api_key
 REDIS_URL=your_redis_url
 UPLOAD_DIR=uploads
 NODE_ENV=development
 ```
 
 `YOUTUBE_API_KEY` must be a real YouTube Data API v3 key for crawling. If it is missing or still set to a placeholder, upload and crawler workflows return a clear configuration error instead of fabricating YouTube results.
+
+`GEMINI_API_KEY` enables the Google Gemini AI review brief workflow for evidence packets. Store it in Google Secret Manager when deploying to Cloud Run.
 
 ## Main Flow
 

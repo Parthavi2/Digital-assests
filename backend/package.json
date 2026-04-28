@@ -15,6 +15,8 @@
     "seed": "node src/seed/seed.js",
     "seed:local": "node src/seed/localSeed.js",
     "seed:ipl": "node src/seed/iplManualSeed.js",
+    "set:gemini": "node src/utils/setEnvValue.js GEMINI_API_KEY",
+    "set:youtube": "node src/utils/setEnvValue.js YOUTUBE_API_KEY",
     "db:reset": "prisma migrate reset --force",
     "check": "node --check src/server.js && node --check src/app.js && node --check src/seed/seed.js"
   },

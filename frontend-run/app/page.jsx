@@ -626,9 +626,23 @@ function MutationsView({ bundle, token }) {
   );
 }
 
-function EvidenceView({ bundle }) {
+function EvidenceView({ bundle, token, refresh }) {
+  const [message, setMessage] = useState('');
+
+  async function generateBrief(packetId) {
+    setMessage('');
+    try {
+      await apiFetch(`/api/evidence/${packetId}/gemini-brief`, { token, method: 'POST', body: {} });
+      setMessage('Gemini review brief generated.');
+      await refresh();
+    } catch (err) {
+      setMessage(err.message || 'Gemini brief failed');
+    }
+  }
+
   return (
     <Panel title="Evidence Reports" subtitle="Review-ready packets prepared for analyst validation">
+      {message ? <div className="inline-note">{message}</div> : null}
       <div className="case-grid">
         {bundle.evidence.map((packet) => (
           <article className="case-card" key={packet.id}>
@@ -643,6 +657,16 @@ function EvidenceView({ bundle }) {
               <strong>{packet.accountName}</strong>
               <strong>{packet.recommendedAction}</strong>
             </div>
+            {packet.aiReviewBrief ? (
+              <div className="inline-note">
+                <strong>Gemini brief</strong>
+                <p>{packet.aiReviewBrief.brief}</p>
+              </div>
+            ) : (
+              <button className="ghost-button" onClick={() => generateBrief(packet.evidenceId || packet.id)}>
+                Generate Gemini brief
+              </button>
+            )}
           </article>
         ))}
       </div>
@@ -732,7 +756,7 @@ function SettingsView({ token, user }) {
         <KeyValue label="Users" value={organization?.users?.length} />
       </Panel>
       <Panel title="Integrations" subtitle="Backend API keys and service status">
-        {integrations ? ['youtube', 'database', 'redis', 'jwt'].map((key) => (
+        {integrations ? ['youtube', 'gemini', 'database', 'redis', 'jwt'].map((key) => (
           <div className="key-value" key={key}>
             <span>{integrations[key].label}</span>
             <strong>{integrations[key].configured ? `Configured (${integrations[key].masked})` : 'Missing'}</strong>

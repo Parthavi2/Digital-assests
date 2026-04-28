@@ -240,6 +240,77 @@ const fetchYouTubeVideoById = async (videoId) => {
   return detailPayload.items?.[0] || null;
 };
 
+const generateGeminiReviewBrief = async ({ evidence, detection, media, asset, risk }) => {
+  const key = requireEnv('GEMINI_API_KEY');
+  const model = process.env.GEMINI_MODEL || 'gemini-2.5-flash';
+  const url = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent`;
+  const prompt = [
+    'You are an AI assistant for a sports media rights analyst.',
+    'Create a concise human-review brief for a suspected highlight misuse case.',
+    'Do not invent facts. Use only the JSON case data. Return practical review notes.',
+    '',
+    JSON.stringify({
+      evidenceId: evidence?.evidenceId,
+      officialAsset: asset ? {
+        title: asset.title,
+        matchName: asset.matchName,
+        teams: asset.teams,
+        tournament: asset.tournament,
+        category: asset.highlightCategory,
+        rightsOwner: asset.rightsOwner
+      } : null,
+      suspectMedia: media ? {
+        platform: media.platform,
+        url: media.detectedUrl,
+        accountName: media.accountName,
+        accountHandle: media.accountHandle,
+        titleOrCaption: media.caption,
+        views: media.views
+      } : null,
+      detection: detection ? {
+        status: detection.detectionStatus,
+        confidenceScore: detection.confidenceScore,
+        matchedDuration: detection.matchedDuration,
+        matchRange: detection.matchedTimestampRange
+      } : null,
+      risk: risk ? {
+        category: risk.riskCategory,
+        finalScore: risk.finalScore,
+        similarityScore: risk.similarityScore,
+        highlightPriorityScore: risk.highlightPriorityScore,
+        propagationVelocityScore: risk.propagationVelocityScore
+      } : null,
+      evidenceReason: evidence?.reasonForFlagging,
+      recommendedAction: evidence?.recommendedAction
+    }, null, 2)
+  ].join('\n');
+
+  const response = await fetch(url, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'x-goog-api-key': key
+    },
+    body: JSON.stringify({
+      contents: [{ parts: [{ text: prompt }] }],
+      generationConfig: {
+        temperature: 0.2,
+        maxOutputTokens: 500
+      }
+    })
+  });
+
+  const payload = await response.json();
+  if (!response.ok) {
+    const error = new Error(payload?.error?.message || 'Gemini review brief generation failed');
+    error.statusCode = response.status;
+    throw error;
+  }
+
+  return payload.candidates?.[0]?.content?.parts?.map((part) => part.text).filter(Boolean).join('\n').trim()
+    || 'Gemini returned no review brief text.';
+};
+
 const createFingerprintForAsset = (db, asset) => {
   let fingerprint = db.fingerprints.find((item) => item.officialAssetId === asset.id);
   if (!fingerprint) {
@@ -1519,6 +1590,38 @@ app.get('/api/evidence/:id/download', (req, res) => {
   res.json(enrichEvidence(db, evidence));
 });
 
+app.post('/api/evidence/:id/gemini-brief', role('ADMIN', 'ANALYST'), async (req, res) => {
+  const db = readDb();
+  const evidence = findByPublicId(db.evidencePackets, req.params.id, 'evidenceId');
+  if (!evidence) return fail(res, 404, 'Evidence packet not found');
+
+  const detection = db.detections.find((item) => item.id === evidence.detectionId);
+  const media = db.crawledMedia.find((item) => item.id === detection?.crawledMediaId);
+  const asset = db.assets.find((item) => item.id === evidence.officialAssetId);
+  const risk = [...db.riskScores]
+    .filter((item) => item.detectionId === detection?.id)
+    .sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt))[0];
+
+  try {
+    const brief = await generateGeminiReviewBrief({ evidence, detection, media, asset, risk });
+    evidence.aiReviewBrief = {
+      provider: 'Google Gemini',
+      model: process.env.GEMINI_MODEL || 'gemini-2.5-flash',
+      brief,
+      generatedById: req.user.id,
+      generatedAt: new Date().toISOString()
+    };
+    evidence.updatedAt = new Date().toISOString();
+    audit(db, req, 'GEMINI_REVIEW_BRIEF_GENERATED', 'EvidencePacket', evidence.id, {
+      model: evidence.aiReviewBrief.model
+    });
+    writeDb(db);
+    return send(res, enrichEvidence(db, evidence));
+  } catch (error) {
+    return fail(res, error.statusCode || 500, error.message, { stage: 'GEMINI_REVIEW_BRIEF' });
+  }
+});
+
 app.get('/api/evidence/:id', (req, res) => {
   const db = readDb();
   const evidence = findByPublicId(db.evidencePackets, req.params.id, 'evidenceId');
@@ -1617,6 +1720,11 @@ app.get('/api/settings/integrations', (_req, res) => {
       ...envStatus('YOUTUBE_API_KEY'),
       label: 'YouTube Data API v3',
       requiredFor: 'Real YouTube search and pasted YouTube URL metadata'
+    },
+    gemini: {
+      ...envStatus('GEMINI_API_KEY'),
+      label: 'Google Gemini API',
+      requiredFor: 'AI-generated human review briefs for evidence packets'
     },
     database: {
       ...envStatus('DATABASE_URL'),
